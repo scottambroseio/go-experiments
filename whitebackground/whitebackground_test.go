@@ -15,8 +15,9 @@ const url string = "https://d2gg9evh47fn9z.cloudfront.net/800px_COLOURBOX3871999
 // 5627 × 3517
 const bigURL string = "https://www.walldevil.com/wallpapers/w04/137357-artwork-flowers-scars-style-white-background-women-women-artwork.jpg"
 
+// non white image
+const failURL string = "https://www.w3schools.com/w3css/img_fjords.jpg" 
 func TestHasWhiteBackground(t *testing.T) {
-	runtime.GOMAXPROCS(4)
 	// don't worry about errors
 	response, e := http.Get(url)
 	if e != nil {
@@ -65,6 +66,22 @@ func BenchmarkHasWhiteBackground_3CPU_5627x3517(b *testing.B) {
 
 func BenchmarkHasWhiteBackground_4CPU_5627x3517(b *testing.B) {
 	benchmarkHasWhiteBackgroundCore(4, b, bigURL)
+}
+
+func BenchmarkHasWhiteBackground_1CPU_FailURL(b *testing.B) {
+	benchmarkHasWhiteBackgroundCore(1, b, failURL)
+}
+
+func BenchmarkHasWhiteBackground_2CPU_FailURL(b *testing.B) {
+	benchmarkHasWhiteBackgroundCore(2, b, failURL)
+}
+
+func BenchmarkHasWhiteBackground_3CPU_FailURL(b *testing.B) {
+	benchmarkHasWhiteBackgroundCore(3, b, failURL)
+}
+
+func BenchmarkHasWhiteBackground_4CPU_FailURL(b *testing.B) {
+	benchmarkHasWhiteBackgroundCore(4, b, failURL)
 }
 
 func benchmarkHasWhiteBackgroundCore(cpus int, b *testing.B, url string) {
