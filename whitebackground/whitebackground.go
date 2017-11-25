@@ -2,6 +2,7 @@ package whitebackground
 
 import (
 	"image"
+	"context"
 )
 
 // HasWhiteBackground checks to see whether has a white background
@@ -16,56 +17,102 @@ func HasWhiteBackground(i image.Image) bool {
 
 	x1, x2, y1, y2 := b.Min.X, b.Max.X-1, b.Min.Y, b.Max.Y-1
 
-	go isTopEdgeWhite(i, c1, x1, x2, y1)
-	go isBottomEdgeWhite(i, c2, x1, x2, y2)
-	go isLeftEdgeWhite(i, c3, x1, y1, y2)
-	go isRightEdgeWhite(i, c4, x2, y1, y2)
+	ctx, cancel := context.WithCancel(context.Background())
 
-	return <-c1 && <-c2 && <-c3 && <-c4
+	go isTopEdgeWhite(ctx, i, c1, x1, x2, y1)
+	go isBottomEdgeWhite(ctx, i, c2, x1, x2, y2)
+	go isLeftEdgeWhite(ctx, i, c3, x1, y1, y2)
+	go isRightEdgeWhite(ctx, i, c4, x2, y1, y2)
+
+	// The moment any channel finds a non white pixel and returns false
+	// Cancel the other go routines as there's no longer any need
+	// for them to continue
+	for count := 0; count < 4; count++ {
+		select {
+			 case res := <-c1:
+				 if !res {
+					cancel()
+					return false
+				 }
+			 case res := <-c2:
+				 if !res {
+					cancel()
+					return false
+				 }
+			 case res := <-c3:
+				 if !res {
+					cancel()
+					return false
+				 }
+			 case res := <-c4:
+				 if !res {
+					cancel()
+					return false
+				 }
+		}
+	}
+
+	return true
 }
 
-func isTopEdgeWhite(i image.Image, c chan bool, x1, x2, y int) {
-	for x1 < x2 {
-		if !isWhitePixel(i.At(x1, y).RGBA()) {
-			c <- false
-			return
+func isTopEdgeWhite(ctx context.Context, i image.Image, c chan bool, x1, x2, y int) {
+	select {
+		case <-ctx.Done(): return
+	default:
+		for x1 < x2 {
+			if !isWhitePixel(i.At(x1, y).RGBA()) {
+				c <- false
+				return
+			}
+			x1++
 		}
-		x1++
+		c <- true
 	}
-	c <- true
 }
 
-func isBottomEdgeWhite(i image.Image, c chan bool, x1, x2, y int) {
-	for x1 < x2 {
-		if !isWhitePixel(i.At(x1, y).RGBA()) {
-			c <- false
-			return
+func isBottomEdgeWhite(ctx context.Context, i image.Image, c chan bool, x1, x2, y int) {
+	select {
+		case <-ctx.Done(): return
+	default:
+		for x1 < x2 {
+			if !isWhitePixel(i.At(x1, y).RGBA()) {
+				c <- false
+				return
+			}
+			x1++
 		}
-		x1++
+		c <- true
 	}
-	c <- true
 }
 
-func isLeftEdgeWhite(i image.Image, c chan bool, x, y1, y2 int) {
-	for y1 < y2 {
-		if !isWhitePixel(i.At(x, y1).RGBA()) {
-			c <- false
-			return
+func isLeftEdgeWhite(ctx context.Context, i image.Image, c chan bool, x, y1, y2 int) {
+	select {
+		case <-ctx.Done(): return
+	default:
+		for y1 < y2 {
+			if !isWhitePixel(i.At(x, y1).RGBA()) {
+				c <- false
+				return
+			}
+			y1++
 		}
-		y1++
+		c <- true
 	}
-	c <- true
 }
 
-func isRightEdgeWhite(i image.Image, c chan bool, x, y1, y2 int) {
-	for y1 < y2 {
-		if !isWhitePixel(i.At(x, y1).RGBA()) {
-			c <- false
-			return
+func isRightEdgeWhite(ctx context.Context, i image.Image, c chan bool, x, y1, y2 int) {
+	select {
+		case <-ctx.Done(): return
+	default:
+		for y1 < y2 {
+			if !isWhitePixel(i.At(x, y1).RGBA()) {
+				c <- false
+				return
+			}
+			y1++
 		}
-		y1++
+		c <- true
 	}
-	c <- true
 }
 
 func isWhitePixel(r, g, b, a uint32) bool {
